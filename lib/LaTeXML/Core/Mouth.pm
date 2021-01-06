@@ -270,8 +270,12 @@ my @DISPATCH = (    # [CONSTANT]
 # LaTeXML::Core::Gullet intercepts them and passes them on at appropriate times.
 sub readToken {
   my ($self) = @_;
+  my $startLine;
+  my $startCol;
   while (1) {    # Iterate till we find a token, or run out. (use return)
                  # ===== Get next line, if we need to.
+    $startCol = $$self{colno};
+    $startLine = $$self{lineno};
     if ($$self{colno} >= $$self{nchars}) {
       $$self{lineno}++;
       $$self{colno} = 0;
@@ -317,6 +321,13 @@ sub readToken {
     my ($ch, $cc) = getNextChar($self);
     my $token = (defined $cc ? $DISPATCH[$cc] : undef);
     $token = &$token($self, $ch) if ref $token eq 'CODE';
+
+    if (defined $token) {
+      my $tokenString = $token->toString();
+      # Switch this to 'source' for the full path.
+      my $sourceName = $$self{shortsource} ? $$self{shortsource} : "unknown";
+      print "Token: \"$tokenString\" (source file $sourceName, from line $startLine col $startCol to line $$self{lineno} col $$self{colno})\n";
+    }
     return $token if defined $token;    # Else, repeat till we get something or run out.
 
   }
