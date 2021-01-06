@@ -274,6 +274,11 @@ sub readXToken {
         else {
           Fatal('misdefined', $r, undef, "Expected a Token, got " . Stringify($_)); } }
       next unless @expansion;
+      
+      print "Definition: " . Stringify($defn) . "\n";
+      my $expanded_text = join('', map { $_->toString() } @expansion);
+      print "Expansion: " . $expanded_text . "\n";
+      
       if ($$LaTeXML::Core::Token::SMUGGLE_THE_COMMANDS{ $$defn{cs}[0] }) {
         # magic THE_TOKS handling, add to pushback with a single-use noexpand flag only valid
         #    at the exact time
