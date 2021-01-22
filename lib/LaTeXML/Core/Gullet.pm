@@ -261,41 +261,54 @@ sub readXToken {
     elsif (my $unexpanded = $$token[2]) {               # Inline get_dont_expand
       return $token; }                                  # Defer expansion (recursion?)
         # Note: special-purpose lookup in State, for efficiency
-    elsif (defined($defn = LaTeXML::Core::State::lookupExpandable($STATE, $token, $toplevel))) {
-      local $LaTeXML::CURRENT_TOKEN = $token;
-      my $invoked   = $defn->invoke($self) || [];
-      my @expansion = ();
-      for my $exp_t (@$invoked) {
-        my $r = ref $exp_t;
-        if ($r eq 'LaTeXML::Core::Token') {
-          push @expansion, $exp_t; }
-        elsif ($r eq 'LaTeXML::Core::Tokens') {
-          push @expansion, @$exp_t; }
-        else {
-          Fatal('misdefined', $r, undef, "Expected a Token, got " . Stringify($_)); } }
-      next unless @expansion;
-      
-      print "Definition: " . Stringify($defn) . "\n";
-      my $expanded_text = join('', map { $_->toString() } @expansion);
-      print "Expansion: " . $expanded_text . "\n";
-      
-      if ($$LaTeXML::Core::Token::SMUGGLE_THE_COMMANDS{ $$defn{cs}[0] }) {
-        # magic THE_TOKS handling, add to pushback with a single-use noexpand flag only valid
-        #    at the exact time
-        # the token leaves the pushback.
-        # This is *required to be different* from the noexpand flag, as per the B Book
-        @expansion = map { T_SMUGGLE_THE($_); } @expansion;
-        # PERFORMANCE:
-        #   explicitly flag that we've seen this case, so that higher levels know to
-        #   unset the flag from the entire {pushback}
-        $$self{pushback_has_smuggled_the} = 1; }
-      # add the newly expanded tokens back into the gullet stream, in the ordinary case.
-      unshift(@{ $$self{pushback} }, @expansion); }
-    elsif ($cc == CC_CS && !(LaTeXML::Core::State::lookupMeaning($STATE, $token))) {
-      $STATE->generateErrorStub($self, $token);
-      return $token; }
     else {
-      return $token; }    # just return it
+      $defn = LaTeXML::Core::State::lookupExpandable($STATE, $token, $toplevel);
+      if (defined($defn)) {
+        my $expansionDepth = $STATE->lookupValue('EXPANSION_DEPTH');
+        $expansionDepth = $expansionDepth ? $expansionDepth : 0;
+        my $newExpansionDepth = $expansionDepth + 1;
+        $STATE->assignValue(EXPANSION_DEPTH => $newExpansionDepth);
+        if ($STATE->lookupValue('IN_MATH')) {
+          print "Start of expansion. "
+            . "Current expansion depth: " . $newExpansionDepth . ". "
+            . "Control sequence: " . Stringify($token) . ".\n";
+        }
+        local $LaTeXML::CURRENT_TOKEN = $token;
+        my $invoked   = $defn->invoke($self) || [];
+        my @expansion = ();
+        for my $exp_t (@$invoked) {
+          my $r = ref $exp_t;
+          if ($r eq 'LaTeXML::Core::Token') {
+            push @expansion, $exp_t; }
+          elsif ($r eq 'LaTeXML::Core::Tokens') {
+            push @expansion, @$exp_t; }
+          else {
+            Fatal('misdefined', $r, undef, "Expected a Token, got " . Stringify($_)); } }
+
+        $STATE->assignValue(EXPANSION_DEPTH => $expansionDepth);
+        next unless @expansion;
+        
+        my $expanded_text = join('', map { $_->toString() } @expansion);
+        print "Expansion: " . $expanded_text . "\n";
+        
+        if ($$LaTeXML::Core::Token::SMUGGLE_THE_COMMANDS{ $$defn{cs}[0] }) {
+          # magic THE_TOKS handling, add to pushback with a single-use noexpand flag only valid
+          #    at the exact time
+          # the token leaves the pushback.
+          # This is *required to be different* from the noexpand flag, as per the B Book
+          @expansion = map { T_SMUGGLE_THE($_); } @expansion;
+          # PERFORMANCE:
+          #   explicitly flag that we've seen this case, so that higher levels know to
+          #   unset the flag from the entire {pushback}
+          $$self{pushback_has_smuggled_the} = 1; }
+        # add the newly expanded tokens back into the gullet stream, in the ordinary case.
+        unshift(@{ $$self{pushback} }, @expansion); }
+      elsif ($cc == CC_CS && !(LaTeXML::Core::State::lookupMeaning($STATE, $token))) {
+        $STATE->generateErrorStub($self, $token);
+        return $token; }
+      else {
+        return $token; }    # just return it
+    }
   }
   return; }               # never get here.
 

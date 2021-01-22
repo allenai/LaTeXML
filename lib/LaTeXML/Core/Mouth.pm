@@ -322,7 +322,7 @@ sub readToken {
     my $token = (defined $cc ? $DISPATCH[$cc] : undef);
     $token = &$token($self, $ch) if ref $token eq 'CODE';
 
-    if (defined $token) {
+    if ($STATE->lookupValue("EXPANSION_DEPTH") && defined $token) {
       my $tokenString = $token->toString();
       # Switch this to 'source' for the full path.
       my $sourceName = $$self{shortsource} ? $$self{shortsource} : "unknown";

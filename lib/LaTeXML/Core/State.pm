@@ -128,6 +128,9 @@ sub new {
 
 sub assign_internal {
   my ($self, $table, $key, $value, $scope) = @_;
+  if ($key ne "EXPANSION_DEPTH") {
+    print "Control sequence defined: $key\n";
+  }
   $scope = ($$self{prefixes}{global} ? 'global' : 'local') unless defined $scope;
   if (exists $$self{tracing_definitions}{$key}) {
     print STDERR "ASSIGN $key in $table " . ($scope ? "($scope)" : '') . " => " .
