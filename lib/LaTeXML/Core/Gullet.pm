@@ -264,16 +264,17 @@ sub readXToken {
     else {
       $defn = LaTeXML::Core::State::lookupExpandable($STATE, $token, $toplevel);
       if (defined($defn)) {
+        # S2: Print out information about a control sequence whenever it is being expanded in a math environment.
         my $expansionDepth = $STATE->lookupValue('EXPANSION_DEPTH');
         $expansionDepth = $expansionDepth ? $expansionDepth : 0;
         my $newExpansionDepth = $expansionDepth + 1;
         $STATE->assignValue(EXPANSION_DEPTH => $newExpansionDepth);
         if ($STATE->lookupValue('IN_MATH')) {
           print "Start of expansion. "
-            . "Control sequence object ID: "  . (Scalar::Util::refaddr $token) . ". "
+            . "Control sequence: " . Stringify($token) . ". "
+            . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
             . "Current expansion depth: " . $newExpansionDepth . ". "
-            . "(If it was read from file, it ended at line " . $self->getMouth->{lineno} . ", col " . $self->getMouth->{colno} . "). "
-            . "Control sequence: " . Stringify($token) . ".\n";
+            . "(If it was read from file, it ended at line " . $self->getMouth->{lineno} . ", col " . $self->getMouth->{colno} . ").\n"
         }
         local $LaTeXML::CURRENT_TOKEN = $token;
         my $invoked   = $defn->invoke($self) || [];
@@ -294,7 +295,19 @@ sub readXToken {
         }
         if ($STATE->lookupValue('IN_MATH') && @expansion) {
           for my $t (@expansion) {
-            print("Expansion token: " . $t->toString() . " (object ID " . (Scalar::Util::refaddr $t) . ")\n");
+            my $t_defn = LaTeXML::Core::State::lookupExpandable($STATE, $t, $toplevel);
+            # S2: If a control sequence has been read and it is not expandable, it may be a no-op
+            # inserted by LaTeXML. For instance, LaTeXML inserts '\<operatorname>@wrapper' when expanding
+            # a math operator declared as '\DeclareMathOperator{\<operatorname>}{<expansion}'. However,
+            # this '*@wrapper' control sequence does not have an expansion itself. Including it in the
+            # expansion would result in invalid LaTeX. So, control sequences that are no-ops should be,
+            # in cases like this, omitted from the expansion. The code that processes these logs will
+            # have to determine which no-ops are expected and should be discarded (e.g., '*@wrapper')
+            # and which ones should be left in (e.g., '\operatorname{...}').
+            my $expandable = (defined $t_defn ? "true" : "false");
+            print "Expansion token: " . $t->toString()
+              . " (object ID " . (Scalar::Util::refaddr $t)
+              . "). Expandable: $expandable.\n";
           }
           print "End of expansion. "
             . "Current expansion depth: " . $newExpansionDepth . ". "

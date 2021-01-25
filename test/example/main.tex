@@ -1,0 +1,40 @@
+\documentclass{article}
+
+\usepackage{amsmath}  % For \DeclareMathOperator
+
+\def\simpledef{x}
+\def\defcontainingcontrolsequence{\simpledef + y}
+\def\defwithargs#1#2{#1 + #2}
+\def\defcontainingstylecontrolsequence{\mathbf x}
+\newcommand{\commandwithargs}[1]{#1}
+\DeclareMathOperator{\op}{op}
+
+\begin{document}
+
+% For expected behavior of TeX when reading spaces, see Chapter 7 of the TeXBook
+% Can use '\relax' as a noop.
+
+% There should be no log output for this control sequence, as it appears outside 
+% of a math environment.
+\simpledef
+
+% Simple case:
+% When you see a def, look at the token for it.
+% Grab the token and all of its arguments. See what gets queued into the gullet
+% during the expansion. That is the expansion.
+$\simpledef$
+
+$\defcontainingcontrolsequence$
+
+$\defcontainingstylecontrolsequence$
+
+$\defwithargs{x}{y}$
+
+% This is a tricky case to handle. Need to support iterative expansion.
+$\defwithargs{\simpledef}{y}$
+
+$\commandwithargs{x}$
+
+$\op x$
+
+\end{document}

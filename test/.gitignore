@@ -3,3 +3,6 @@
 *.log
 *.pdf
 texput.log
+.*.sw*
+
+.hidden
