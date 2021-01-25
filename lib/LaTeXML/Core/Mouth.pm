@@ -326,7 +326,7 @@ sub readToken {
       my $tokenString = $token->toString();
       # Switch this to 'source' for the full path.
       my $sourceName = $$self{shortsource} ? $$self{shortsource} : "unknown";
-      print "Token: \"$tokenString\" (source file $sourceName, from line $startLine col $startCol to line $$self{lineno} col $$self{colno})\n";
+      print "Argument token: \"$tokenString\" (source file $sourceName, from line $startLine col $startCol to line $$self{lineno} col $$self{colno})\n";
     }
     return $token if defined $token;    # Else, repeat till we get something or run out.
 
