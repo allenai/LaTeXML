@@ -270,7 +270,9 @@ sub readXToken {
         $STATE->assignValue(EXPANSION_DEPTH => $newExpansionDepth);
         if ($STATE->lookupValue('IN_MATH')) {
           print "Start of expansion. "
+            . "Control sequence object ID: "  . (Scalar::Util::refaddr $token) . ". "
             . "Current expansion depth: " . $newExpansionDepth . ". "
+            . "(If it was read from file, it ended at line " . $self->getMouth->{lineno} . ", col " . $self->getMouth->{colno} . "). "
             . "Control sequence: " . Stringify($token) . ".\n";
         }
         local $LaTeXML::CURRENT_TOKEN = $token;
@@ -286,10 +288,20 @@ sub readXToken {
             Fatal('misdefined', $r, undef, "Expected a Token, got " . Stringify($_)); } }
 
         $STATE->assignValue(EXPANSION_DEPTH => $expansionDepth);
-        next unless @expansion;
+        my $expanded_text = "(error expanding text)";
+        if (@expansion) {
+          $expanded_text = join('', map { $_->toString() } @expansion);
+        }
+        if ($STATE->lookupValue('IN_MATH') && @expansion) {
+          for my $t (@expansion) {
+            print("Expansion token: " . $t->toString() . " (object ID " . (Scalar::Util::refaddr $t) . ")\n");
+          }
+          print "End of expansion. "
+            . "Current expansion depth: " . $newExpansionDepth . ". "
+            . "Expansion: $expanded_text.\n";
+        }
         
-        my $expanded_text = join('', map { $_->toString() } @expansion);
-        print "Expansion: " . $expanded_text . "\n";
+        next unless @expansion;
         
         if ($$LaTeXML::Core::Token::SMUGGLE_THE_COMMANDS{ $$defn{cs}[0] }) {
           # magic THE_TOKS handling, add to pushback with a single-use noexpand flag only valid

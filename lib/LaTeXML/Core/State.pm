@@ -128,9 +128,6 @@ sub new {
 
 sub assign_internal {
   my ($self, $table, $key, $value, $scope) = @_;
-  if ($key ne "EXPANSION_DEPTH") {
-    print "Control sequence defined: $key\n";
-  }
   $scope = ($$self{prefixes}{global} ? 'global' : 'local') unless defined $scope;
   if (exists $$self{tracing_definitions}{$key}) {
     print STDERR "ASSIGN $key in $table " . ($scope ? "($scope)" : '') . " => " .
@@ -152,6 +149,12 @@ sub assign_internal {
     if ($$self{undo}[0]{$table}{$key}) {      # If the value was previously assigned in this frame
       $$self{$table}{$key}[0] = $value; }     # Simply replace the value
     else {                                    # Otherwise, push new value & set 1 to be undone
+      if ($key ne "EXPANSION_DEPTH") {
+        my $source = $self->getStomach->getGullet->getSource;
+        if (defined $source && !($source =~ /ltxml$/)) {
+          print "Control sequence '$key' defined when reading file $source.\n";
+        }
+      }
       $$self{undo}[0]{$table}{$key} = 1;
       unshift(@{ $$self{$table}{$key} }, $value); } }    # And push new binding.
   else {
