@@ -274,7 +274,10 @@ sub readXToken {
             . "Control sequence: " . Stringify($token) . ". "
             . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
             . "Current expansion depth: " . $newExpansionDepth . ". "
-            . "(If it was read from file, it ended at line " . $self->getMouth->{lineno} . ", col " . $self->getMouth->{colno} . ").\n"
+            . "(If this was a literal control sequence in a file rather than from an expansion, "
+            . "it appeared in " . $self->getMouth->{source} . " "
+            . "from line " . $self->getMouth->{lastlineno} . ", col " . $self->getMouth->{lastcolno} . " "
+            . "to line " . $self->getMouth->{lineno} . ", col " . $self->getMouth->{colno} . ").\n";
         }
         local $LaTeXML::CURRENT_TOKEN = $token;
         my $invoked   = $defn->invoke($self) || [];
