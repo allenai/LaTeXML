@@ -81,6 +81,8 @@ sub initialize {
   my ($self) = @_;
   $$self{lineno} = 0;
   $$self{colno}  = 0;
+  $$self{lastlineno} = 0;
+  $$self{lastcolno} = 0;
   $$self{chars}  = [];
   $$self{nchars} = 0;
   if ($$self{notes}) {
@@ -100,6 +102,8 @@ sub finish {
   $$self{buffer} = [];
   $$self{lineno} = 0;
   $$self{colno}  = 0;
+  $$self{lastlineno} = 0;
+  $$self{lastcolno} = 0;
   $$self{chars}  = [];
   $$self{nchars} = 0;
   if ($$self{fordefinitions}) {
@@ -270,12 +274,10 @@ my @DISPATCH = (    # [CONSTANT]
 # LaTeXML::Core::Gullet intercepts them and passes them on at appropriate times.
 sub readToken {
   my ($self) = @_;
-  my $startLine;
-  my $startCol;
   while (1) {    # Iterate till we find a token, or run out. (use return)
                  # ===== Get next line, if we need to.
-    $startCol = $$self{colno};
-    $startLine = $$self{lineno};
+    $$self{lastlineno} = $$self{lineno};
+    $$self{lastcolno} = $$self{colno};
     if ($$self{colno} >= $$self{nchars}) {
       $$self{lineno}++;
       $$self{colno} = 0;
@@ -326,7 +328,10 @@ sub readToken {
       my $tokenString = $token->toString();
       # Switch this to 'source' for the full path.
       my $sourceName = $$self{shortsource} ? $$self{shortsource} : "unknown";
-      print "Argument token: \"$tokenString\" (source file $sourceName, from line $startLine col $startCol to line $$self{lineno} col $$self{colno})\n";
+      print "Argument token: \"$tokenString\" "
+        . "(source file $sourceName, "
+        . "from line $$self{lastlineno} col $$self{lastcolno} "
+        . "to line $$self{lineno} col $$self{colno}).\n";
     }
     return $token if defined $token;    # Else, repeat till we get something or run out.
 
