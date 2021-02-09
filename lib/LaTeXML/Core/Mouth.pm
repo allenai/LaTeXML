@@ -324,15 +324,6 @@ sub readToken {
     my $token = (defined $cc ? $DISPATCH[$cc] : undef);
     $token = &$token($self, $ch) if ref $token eq 'CODE';
 
-    if ($STATE->lookupValue("IN_MATH") && $STATE->lookupValue("EXPANSION_DEPTH") && defined $token) {
-      my $tokenString = $token->toString();
-      # Switch this to 'source' for the full path.
-      my $sourceName = $$self{shortsource} ? $$self{shortsource} : "unknown";
-      print "Argument token: \"$tokenString\" "
-        . "(source file $sourceName, "
-        . "from line $$self{lastlineno} col $$self{lastcolno} "
-        . "to line $$self{lineno} col $$self{colno}).\n";
-    }
     return $token if defined $token;    # Else, repeat till we get something or run out.
 
   }

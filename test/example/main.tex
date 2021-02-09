@@ -8,6 +8,8 @@
 \def\defcontainingstylecontrolsequence{\mathbf x}
 \newcommand{\commandwithargs}[1]{#1}
 \DeclareMathOperator{\op}{op}
+\def\nesteddefwitharg#1{\mathbf #1}
+\def\parentdef{\nesteddefwitharg{x}}
 
 \begin{document}
 
@@ -30,11 +32,15 @@ $\defcontainingstylecontrolsequence$
 
 $\defwithargs{x}{y}$
 
+$\defwithargs {x}{y}$
+
 % This is a tricky case to handle. Need to support iterative expansion.
 $\defwithargs{\simpledef}{y}$
 
 $\commandwithargs{x}$
 
 $\op x$
+
+$\parentdef$
 
 \end{document}

@@ -215,6 +215,36 @@ sub readToken {
     elsif ($cc == CC_MARKER) {
       LaTeXML::Core::Definition::stopProfiling($token, 'expand'); } }
   if (defined $token) {
+    # S2: Print out information about arguments to macros in math environments, as well as the
+    # delimiters between those arguments, all of which will be replaced when a macro is expanded.
+    # Arguments and delimiters are logged here because it is a reliable place to detect most
+    # if not all arguments and delimiters that are read.
+    #
+    # To clarify, when expanding a control sequence, the following happens:
+    #
+    # 1. A control sequence is found in 'readXToken'
+    # 2. The expansion object for that control sequence is fetched from a table
+    # 3. The expansion is "invoked" on the text to read its arguments and expand it
+    # 4. The reading of arguments occurs in Parameters->readArguments method
+    # 5. This invokes the Parameter->read method
+    # 6. The Parameter object then invokes one of many "reader" functions. Each of these
+    #    readers is defined in one of the '*.pool.ltxml' files (see for instance
+    #    'TeX.pool.ltxml').
+    # 7. These readers, to the extent that I have inspected them, call back to
+    #    _this_ Gullet function (readToken) to read tokens to find the arguments for the macro
+    #    and delimiters between each one.
+    #
+    # Earlier, the reading of arguments was detected in the Mouth. However, this was
+    # insufficient because arguments for nested control sequences often do not appear
+    # in the mouth (because they were not in the original TeX files); rather they appear in the
+    # 'pushback' list of tokens in this Gullet, where they come from the expansion of a macro
+    # instead of the original TeX file.
+    if ($STATE->lookupValue("IN_MATH") && $STATE->lookupValue("EXPANSION_DEPTH")) {
+      my $tokenString = $token->toString();
+      print "Argument token: \"$tokenString\" "
+        . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
+        . "From pushback (i.e., likely from expansion).\n"
+    }    
     return $token; }
   # Not in pushback, use the current mouth
   while (($token = $$self{mouth}->readToken()) && $CATCODE_HOLD[$cc = $$token[1]]) {
@@ -222,6 +252,16 @@ sub readToken {
       push(@{ $$self{pending_comments} }, $token); }    # What to do with comments???
     elsif ($cc == CC_MARKER) {
       LaTeXML::Core::Definition::stopProfiling($token, 'expand'); } }
+  if ($STATE->lookupValue("IN_MATH") && $STATE->lookupValue("EXPANSION_DEPTH") && defined $token) {
+    my $tokenString = $token->toString();
+    my $sourceName = $$self{mouth}->{source} ? $$self{mouth}->{source} : "unknown";
+    # S2: Print out information about 
+    print "Argument token: \"$tokenString\" "
+      . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
+      . "(source file $sourceName, "
+      . "from line $$self{lastlineno} col $$self{lastcolno} "
+      . "to line $$self{lineno} col $$self{colno}).\n";
+  }      
   return $token; }
 
 # Unread tokens are assumed to be not-yet expanded.
@@ -264,7 +304,8 @@ sub readXToken {
     else {
       $defn = LaTeXML::Core::State::lookupExpandable($STATE, $token, $toplevel);
       if (defined($defn)) {
-        # S2: Print out information about a control sequence whenever it is being expanded in a math environment.
+        # S2: Print out information about a control sequence whenever it is being expanded in a
+        # math environment.
         my $expansionDepth = $STATE->lookupValue('EXPANSION_DEPTH');
         $expansionDepth = $expansionDepth ? $expansionDepth : 0;
         my $newExpansionDepth = $expansionDepth + 1;
@@ -310,9 +351,11 @@ sub readXToken {
             my $expandable = (defined $t_defn ? "true" : "false");
             print "Expansion token: " . $t->toString()
               . " (object ID " . (Scalar::Util::refaddr $t)
-              . "). Expandable: $expandable.\n";
+              . "). Category: " . $$t[1] . ". "
+              . "Expandable: $expandable.\n";
           }
-          print "End of expansion. "
+          print "End of expansion "
+            . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
             . "Current expansion depth: " . $newExpansionDepth . ". "
             . "Expansion: $expanded_text.\n";
         }
