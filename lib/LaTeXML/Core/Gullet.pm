@@ -216,11 +216,11 @@ sub readToken {
       LaTeXML::Core::Definition::stopProfiling($token, 'expand'); } }
   if (defined $token) {
     # S2: Print out information about arguments to macros in math environments, as well as the
-    # delimiters between those arguments, all of which will be replaced when a macro is expanded.
-    # Arguments and delimiters are logged here because it is a reliable place to detect most
-    # if not all arguments and delimiters that are read.
+    # delimiters between those arguments (because these arguments and delimiters will be replaced
+    # when a macro is expanded). Arguments and delimiters are logged here because it is a reliable
+    # place to detect most if not all arguments and delimiters that are read.
     #
-    # To clarify, when expanding a control sequence, the following happens:
+    # When a control sequence is expanded, the following happens:
     #
     # 1. A control sequence is found in 'readXToken'
     # 2. The expansion object for that control sequence is fetched from a table
@@ -234,7 +234,7 @@ sub readToken {
     #    _this_ Gullet function (readToken) to read tokens to find the arguments for the macro
     #    and delimiters between each one.
     #
-    # Earlier, the reading of arguments was detected in the Mouth. However, this was
+    # The reading of arguments used to be detected in the Mouth. However, this was
     # insufficient because arguments for nested control sequences often do not appear
     # in the mouth (because they were not in the original TeX files); rather they appear in the
     # 'pushback' list of tokens in this Gullet, where they come from the expansion of a macro
@@ -244,7 +244,7 @@ sub readToken {
       print "Argument token: \"$tokenString\" "
         . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
         . "From pushback (i.e., likely from expansion).\n"
-    }    
+    }
     return $token; }
   # Not in pushback, use the current mouth
   while (($token = $$self{mouth}->readToken()) && $CATCODE_HOLD[$cc = $$token[1]]) {
@@ -255,13 +255,16 @@ sub readToken {
   if ($STATE->lookupValue("IN_MATH") && $STATE->lookupValue("EXPANSION_DEPTH") && defined $token) {
     my $tokenString = $token->toString();
     my $sourceName = $$self{mouth}->{source} ? $$self{mouth}->{source} : "unknown";
-    # S2: Print out information about 
+    # S2: Print out information about arguments to macros in math environments, as well as the
+    # delimiters between those arguments. This block of code should be triggered when an argument
+    # or delimiter is read from the mouth (i.e., the original source file) rather than the pushback
+    # (i.e., the output of prior expansions).
     print "Argument token: \"$tokenString\" "
       . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
       . "(source file $sourceName, "
-      . "from line $$self{lastlineno} col $$self{lastcolno} "
-      . "to line $$self{lineno} col $$self{colno}).\n";
-  }      
+      . "from line " . $$self{mouth}->{lastlineno} . " col " . $$self{mouth}->{lastcolno} . " "
+      . "to line " . $$self{mouth}->{lineno} . " col " . $$self{mouth}->{colno} . ").\n";
+  }
   return $token; }
 
 # Unread tokens are assumed to be not-yet expanded.
@@ -311,12 +314,13 @@ sub readXToken {
         my $newExpansionDepth = $expansionDepth + 1;
         $STATE->assignValue(EXPANSION_DEPTH => $newExpansionDepth);
         if ($STATE->lookupValue('IN_MATH')) {
+          my $sourceName = $self->getMouth->{source} ? $self->getMouth->{source} : "unknown";
           print "Start of expansion. "
             . "Control sequence: " . Stringify($token) . ". "
             . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
             . "Current expansion depth: " . $newExpansionDepth . ". "
             . "(If this was a literal control sequence in a file rather than from an expansion, "
-            . "it appeared in " . $self->getMouth->{source} . " "
+            . "it appeared in " . $sourceName . " "
             . "from line " . $self->getMouth->{lastlineno} . ", col " . $self->getMouth->{lastcolno} . " "
             . "to line " . $self->getMouth->{lineno} . ", col " . $self->getMouth->{colno} . ").\n";
         }
