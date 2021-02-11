@@ -241,7 +241,7 @@ sub readToken {
     # instead of the original TeX file.
     if ($STATE->lookupValue("IN_MATH") && $STATE->lookupValue("EXPANSION_DEPTH")) {
       my $tokenString = $token->toString();
-      print "Argument token: \"$tokenString\" "
+      print "Argument token (from pushback): \"$tokenString\" "
         . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
         . "From pushback (i.e., likely from expansion).\n"
     }
@@ -259,7 +259,7 @@ sub readToken {
     # delimiters between those arguments. This block of code should be triggered when an argument
     # or delimiter is read from the mouth (i.e., the original source file) rather than the pushback
     # (i.e., the output of prior expansions).
-    print "Argument token: \"$tokenString\" "
+    print "Argument token (from file): \"$tokenString\" "
       . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
       . "(source file $sourceName, "
       . "from line " . $$self{mouth}->{lastlineno} . " col " . $$self{mouth}->{lastcolno} . " "
