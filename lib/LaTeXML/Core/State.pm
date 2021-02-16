@@ -154,7 +154,17 @@ sub assign_internal {
       unshift(@{ $$self{$table}{$key} }, $value); } }    # And push new binding.
     if ($key ne "EXPANSION_DEPTH") {
       my $source = $self->getStomach->getGullet->getSource;
-      if (defined $source && !($source =~ /ltxml$/)) {
+      if (
+        # Only report macros that have been defined outside of the 'ltxml' files (which define
+        # the macros for common TeXLive macros).
+        defined $source &&
+        !($source =~ /ltxml$/) &&
+        # Do not report macros that are defined through process of expanding other macros. This
+        # may seem obscure and coarse, though it rules out logging of internal helper macros
+        # defined in the 'siunitx' package and reporting their source as one of the main project
+        # files, rather than the ltxml file for the package.
+        !($self->lookupValue('EXPANSION_DEPTH'))
+      ) {
         print "Control sequence '$key' defined when reading file $source.\n";
       }
     }
