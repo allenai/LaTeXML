@@ -15,6 +15,7 @@ use warnings;
 use LaTeXML::Global;
 use LaTeXML::Common::Error;
 use LaTeXML::Core::Token;    # To get CatCodes
+use Devel::StackTrace;
 
 # Naming scheme for keys (such as it is)
 #    binding:<cs>  : the definition associated with <cs>
@@ -149,14 +150,14 @@ sub assign_internal {
     if ($$self{undo}[0]{$table}{$key}) {      # If the value was previously assigned in this frame
       $$self{$table}{$key}[0] = $value; }     # Simply replace the value
     else {                                    # Otherwise, push new value & set 1 to be undone
-      if ($key ne "EXPANSION_DEPTH") {
-        my $source = $self->getStomach->getGullet->getSource;
-        if (defined $source && !($source =~ /ltxml$/)) {
-          print "Control sequence '$key' defined when reading file $source.\n";
-        }
-      }
       $$self{undo}[0]{$table}{$key} = 1;
       unshift(@{ $$self{$table}{$key} }, $value); } }    # And push new binding.
+    if ($key ne "EXPANSION_DEPTH") {
+      my $source = $self->getStomach->getGullet->getSource;
+      if (defined $source && !($source =~ /ltxml$/)) {
+        print "Control sequence '$key' defined when reading file $source.\n";
+      }
+    }
   else {
     # print STDERR "Assigning $key in stash $stash\n";
     assign_internal($self, 'stash', $scope, [], 'global') unless $$self{stash}{$scope}[0];
