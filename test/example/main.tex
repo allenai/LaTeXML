@@ -1,6 +1,7 @@
 \documentclass{article}
 
 \usepackage{amsmath}  % For \DeclareMathOperator
+\usepackage{siunitx}
 
 \def\simpledef{x}
 \def\defcontainingcontrolsequence{\simpledef + y}
@@ -10,11 +11,15 @@
 \DeclareMathOperator{\op}{op}
 \def\nesteddefwitharg#1{\mathbf #1}
 \def\parentdef{\nesteddefwitharg{xx}}
+\newcommand{\renewed}{x}
+\renewcommand{\renewed}{x}
 
 \begin{document}
 
 % For expected behavior of TeX when reading spaces, see Chapter 7 of the TeXBook
 % Can use '\relax' as a noop.
+
+$\num{10000}$
 
 % There should be no log output for this control sequence, as it appears outside 
 % of a math environment.
