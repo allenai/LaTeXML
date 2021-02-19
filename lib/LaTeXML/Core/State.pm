@@ -165,7 +165,24 @@ sub assign_internal {
         # files, rather than the ltxml file for the package.
         !($self->lookupValue('EXPANSION_DEPTH'))
       ) {
-        print "Control sequence '$key' defined when reading file $source.\n";
+        # Skip macros that are defined as part of the 'beforeDigest' or 'afterDigest' callbacks.
+        # These callbacks often define temporary macros that LaTeXML uses internally. The issue
+        # is that some of these macros have the same name as macros that should not be
+        # expanded by a macro expander (e.g., '\\'); hence, they are omitted here.
+        my $skip = 0;
+        my $trace = Devel::StackTrace->new;
+        while (my $frame = $trace->next_frame) {
+          if (
+            ($frame->subroutine eq "LaTeXML::Core::Definition::Primitive::executeBeforeDigest") ||
+            ($frame->subroutine eq "LaTeXML::Core::Definition::Primitive::executeAfterDigest")
+          ) {
+            $skip = 1;
+            last;
+          }
+        }
+        if (!$skip) {
+          print "Control sequence '$key' defined when reading file $source.\n";
+        }
       }
     }
   else {
