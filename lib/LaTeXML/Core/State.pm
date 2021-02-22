@@ -153,28 +153,42 @@ sub assign_internal {
       $$self{undo}[0]{$table}{$key} = 1;
       unshift(@{ $$self{$table}{$key} }, $value); } }    # And push new binding.
     if ($key ne "EXPANSION_DEPTH") {
-      my $source = $self->getStomach->getGullet->getSource;
+      my $source = $self->getStomach->getGullet->getSource || "'unknown'";
       if (
-        # Only report macros that have been defined outside of the 'ltxml' files (which define
-        # the macros for common TeXLive macros).
         defined $source &&
-        !($source =~ /ltxml$/) &&
         # Do not report macros that are defined through process of expanding other macros. This
         # may seem obscure and coarse, though it rules out logging of internal helper macros
         # defined in the 'siunitx' package and reporting their source as one of the main project
         # files, rather than the ltxml file for the package.
         !($self->lookupValue('EXPANSION_DEPTH'))
       ) {
-        # Skip macros that are defined as part of the 'beforeDigest' or 'afterDigest' callbacks.
-        # These callbacks often define temporary macros that LaTeXML uses internally. The issue
-        # is that some of these macros have the same name as macros that should not be
-        # expanded by a macro expander (e.g., '\\'); hence, they are omitted here.
         my $skip = 0;
         my $trace = Devel::StackTrace->new;
+        print "Before\n";
         while (my $frame = $trace->next_frame) {
+          print $frame->subroutine . "\n";
           if (
-            ($frame->subroutine eq "LaTeXML::Core::Definition::Primitive::executeBeforeDigest") ||
-            ($frame->subroutine eq "LaTeXML::Core::Definition::Primitive::executeAfterDigest")
+            # LaTeXML defines many internal macros while it digests tokens, in cases like:
+            # 1. Beginning a new group (e.g., '{ ... }').
+            # 2. Opening an aligned equation environment (e.g., '\begin{align}').
+            # The rules below exclude as many of these cases of definition of internal macros from
+            # the logs as possible. This is needed because the scripts that read these logs depend
+            # on an accurate assessment of what files macros were defined in. In the cases below,
+            # the file that the macro was defined in is *not* the same as the mouth source file, and
+            # there is no convenient way to find the source file. 
+            # Macro definitions are excluded by looking for clues about how the macro was defined
+            # (e.g., as part of bindings for an equation environment, or as part of the
+            # 'executeBeforeDigest' hook of another macro.
+            ($frame->subroutine =~ /::executeBeforeDigest$/) ||
+            ($frame->subroutine =~ /::executeAfterDigest$/) ||
+            ($frame->subroutine =~ /[Bb]indings$/) ||
+            ($frame->subroutine =~ /begingroup$/) ||
+            # The 'assign_internal' function is called for more than just setting macros; it is also
+            # used to set the catcodes of characters and assign values to variables. None of the
+            # other cases should be considered as setting a control sequence.
+            ($frame->subroutine =~ /assignCatcode$/) ||
+            ($frame->subroutine =~ /assignMathcode$/) ||
+            ($frame->subroutine =~ /assignValue$/)
           ) {
             $skip = 1;
             last;
