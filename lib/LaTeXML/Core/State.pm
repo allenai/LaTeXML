@@ -164,9 +164,7 @@ sub assign_internal {
       ) {
         my $skip = 0;
         my $trace = Devel::StackTrace->new;
-        print "Before\n";
         while (my $frame = $trace->next_frame) {
-          print $frame->subroutine . "\n";
           if (
             # LaTeXML defines many internal macros while it digests tokens, in cases like:
             # 1. Beginning a new group (e.g., '{ ... }').
@@ -188,7 +186,17 @@ sub assign_internal {
             # other cases should be considered as setting a control sequence.
             ($frame->subroutine =~ /assignCatcode$/) ||
             ($frame->subroutine =~ /assignMathcode$/) ||
-            ($frame->subroutine =~ /assignValue$/)
+            ($frame->subroutine =~ /assignValue$/) ||
+            # Ignore ignore the definition of environments, counters, and registers.
+            ($frame->subroutine =~ /DefEnvironment$/) ||
+            ($frame->subroutine =~ /DefRegister$/) ||
+            ($frame->subroutine =~ /NewCounter$/) ||
+            ($frame->subroutine =~ /StepCounter$/) ||
+            ($frame->subroutine =~ /RefStepCounter$/) ||
+            # Ignore definitions created by other definition management macros.
+            ($frame->subroutine =~ /defineNewTheorem$/) ||
+            # Ignore definitions of helpers in handling key-values.
+            ($frame->subroutine =~ /KeyVals::beDigested$/)
           ) {
             $skip = 1;
             last;
