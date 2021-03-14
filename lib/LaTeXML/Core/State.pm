@@ -88,7 +88,12 @@ use Devel::StackTrace;
 #     model    => a Mod el object.
 sub new {
   my ($class, %options) = @_;
+  my $log_expansions = 0;
+  if (defined $ENV{LATEXML_LOG_EXPANSIONS} && $ENV{LATEXML_LOG_EXPANSIONS} eq "true") {
+    $log_expansions = 1;
+  }
   my $self = bless {    # table => {},
+    log_expansions => $log_expansions,
     value   => {}, meaning  => {}, stash  => {}, stash_active => {},
     catcode => {}, mathcode => {}, sfcode => {}, lccode => {}, uccode => {}, delcode => {},
     undo    => [{ _FRAME_LOCK_ => 1 }], prefixes => {}, status => {},
@@ -152,10 +157,16 @@ sub assign_internal {
     else {                                    # Otherwise, push new value & set 1 to be undone
       $$self{undo}[0]{$table}{$key} = 1;
       unshift(@{ $$self{$table}{$key} }, $value); } }    # And push new binding.
-    if ($key ne "EXPANSION_DEPTH") {
-      my $source = $self->getStomach->getGullet->getSource || "'unknown'";
+    if (0 && $self->{log_expansions} && ($key ne "EXPANSION_DEPTH")) {
+      my $source = "'unknown'";
       if (
-        defined $source &&
+        (defined $self->getStomach) &&
+        (defined $self->getStomach->getGullet) &&
+        (defined $self->getStomach->getGullet->getSource)
+      ) {
+        $source = $self->getStomach->getGullet->getSource;
+      }
+      if (
         # Do not report macros that are defined through process of expanding other macros. This
         # may seem obscure and coarse, though it rules out logging of internal helper macros
         # defined in the 'siunitx' package and reporting their source as one of the main project
