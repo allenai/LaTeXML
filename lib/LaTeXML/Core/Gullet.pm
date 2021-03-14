@@ -239,7 +239,11 @@ sub readToken {
     # in the mouth (because they were not in the original TeX files); rather they appear in the
     # 'pushback' list of tokens in this Gullet, where they come from the expansion of a macro
     # instead of the original TeX file.
-    if ($STATE->lookupValue("IN_MATH") && $STATE->lookupValue("EXPANSION_DEPTH")) {
+    if (
+      $STATE->{log_expansions} &&
+      $STATE->lookupValue("IN_MATH") &&
+      $STATE->lookupValue("EXPANSION_DEPTH")
+    ) {
       my $tokenString = $token->toString();
       print "Argument token (from pushback): \"$tokenString\" "
         . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
@@ -252,7 +256,12 @@ sub readToken {
       push(@{ $$self{pending_comments} }, $token); }    # What to do with comments???
     elsif ($cc == CC_MARKER) {
       LaTeXML::Core::Definition::stopProfiling($token, 'expand'); } }
-  if ($STATE->lookupValue("IN_MATH") && $STATE->lookupValue("EXPANSION_DEPTH") && defined $token) {
+  if (
+      $STATE->{log_expansions} &&
+      $STATE->lookupValue("IN_MATH") &&
+      $STATE->lookupValue("EXPANSION_DEPTH") &&
+      defined $token
+  ) {
     my $tokenString = $token->toString();
     my $sourceName = $$self{mouth}->{source} ? $$self{mouth}->{source} : "unknown";
     # S2: Print out information about arguments to macros in math environments, as well as the
@@ -313,16 +322,19 @@ sub readXToken {
         $expansionDepth = $expansionDepth ? $expansionDepth : 0;
         my $newExpansionDepth = $expansionDepth + 1;
         $STATE->assignValue(EXPANSION_DEPTH => $newExpansionDepth);
-        if ($STATE->lookupValue('IN_MATH')) {
-          my $sourceName = $self->getMouth->{source} ? $self->getMouth->{source} : "unknown";
-          print "Start of expansion. "
-            . "Control sequence: " . Stringify($token) . ". "
-            . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
-            . "Current expansion depth: " . $newExpansionDepth . ". "
-            . "(If this was a literal control sequence in a file rather than from an expansion, "
-            . "it appeared in " . $sourceName . " "
-            . "from line " . $self->getMouth->{lastlineno} . ", col " . $self->getMouth->{lastcolno} . " "
-            . "to line " . $self->getMouth->{lineno} . ", col " . $self->getMouth->{colno} . ").\n";
+        if ($STATE->{log_expansions}) {
+          print "Checking for expansion for " . Stringify($token) . ", IN_MATH: " . $STATE->lookupValue('IN_MATH') ."\n";
+          if ($STATE->lookupValue('IN_MATH')) {
+            my $sourceName = $self->getMouth->{source} ? $self->getMouth->{source} : "unknown";
+            print "Start of expansion. "
+              . "Control sequence: " . Stringify($token) . ". "
+              . "(object ID: "  . (Scalar::Util::refaddr $token) . "). "
+              . "Current expansion depth: " . $newExpansionDepth . ". "
+              . "(If this was a literal control sequence in a file rather than from an expansion, "
+              . "it appeared in " . $sourceName . " "
+              . "from line " . $self->getMouth->{lastlineno} . ", col " . $self->getMouth->{lastcolno} . " "
+              . "to line " . $self->getMouth->{lineno} . ", col " . $self->getMouth->{colno} . ").\n";
+          }
         }
         local $LaTeXML::CURRENT_TOKEN = $token;
         my $invoked   = $defn->invoke($self) || [];
@@ -341,7 +353,7 @@ sub readXToken {
         if (@expansion) {
           $expanded_text = join('', map { $_->toString() } @expansion);
         }
-        if ($STATE->lookupValue('IN_MATH') && @expansion) {
+        if ($STATE->{log_expansions} && $STATE->lookupValue('IN_MATH') && @expansion) {
           for my $t (@expansion) {
             my $t_defn = LaTeXML::Core::State::lookupExpandable($STATE, $t, $toplevel);
             # S2: If a control sequence has been read and it is not expandable, it may be a no-op
