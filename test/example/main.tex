@@ -32,6 +32,19 @@ $\dots$
 \begin{align*}
 \end{align*}
 
+\def\nx{{\textnormal{x}}}
+
+% In buggy instrumentation, \nx will not get reported with its character 
+% positions when it is an argument to something else. Maybe need to
+% make a placeholder for root-level macros that take others as arguments.
+$\frac{1}{\nx}$
+
+% In buggy instrumentation, \nx will not be reported as occurring in a math 
+% environment when it appears very first in an align environment ¯\_(ツ)_/¯.
+\begin{align*}
+\nx
+\end{align*}
+
 % Simple case:
 % When you see a def, look at the token for it.
 % Grab the token and all of its arguments. See what gets queued into the gullet
