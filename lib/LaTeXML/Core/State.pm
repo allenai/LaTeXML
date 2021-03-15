@@ -156,8 +156,8 @@ sub assign_internal {
       $$self{$table}{$key}[0] = $value; }     # Simply replace the value
     else {                                    # Otherwise, push new value & set 1 to be undone
       $$self{undo}[0]{$table}{$key} = 1;
-      unshift(@{ $$self{$table}{$key} }, $value); } }    # And push new binding.
-    if (0 && $self->{log_expansions} && ($key ne "EXPANSION_DEPTH")) {
+      unshift(@{ $$self{$table}{$key} }, $value); }      # And push new binding.
+    if ($self->{log_expansions} && ($key ne "EXPANSION_DEPTH")) {
       my $source = "'unknown'";
       if (
         (defined $self->getStomach) &&
@@ -215,9 +215,7 @@ sub assign_internal {
         }
         if (!$skip) {
           print "Control sequence '$key' defined when reading file $source.\n";
-        }
-      }
-    }
+        } } } }
   else {
     # print STDERR "Assigning $key in stash $stash\n";
     assign_internal($self, 'stash', $scope, [], 'global') unless $$self{stash}{$scope}[0];
